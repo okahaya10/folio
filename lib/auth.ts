@@ -33,6 +33,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  // Reverse-proxied deployments (nginx in front, or the local
+  // scripts/https-proxy.mjs used for browser testing) terminate
+  // TLS before the app — without trustHost, Auth.js builds redirect
+  // URLs from the raw (proxied-to) request, which looks like plain
+  // HTTP, and the browser fails loading the http:// redirect target
+  // over what it thinks is an https:// site. This is standard/
+  // required Auth.js config for any reverse-proxied deployment (see
+  // https://authjs.dev/reference/core#trusthost), not VPS-specific.
+  trustHost: true,
   callbacks: {
     jwt: jwtCallback as any,
     session: sessionCallback as any,

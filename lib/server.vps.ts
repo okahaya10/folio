@@ -76,7 +76,16 @@ export async function tenant(id: string, user: string) {
 
 export function checkOrigin(r: Request) {
   const o = r.headers.get("origin");
-  if (o && o !== new URL(r.url).origin) throw new Error("不正なリクエストです");
+  // Compare host only, not the full origin (scheme included) — behind
+  // a reverse proxy that terminates TLS (nginx in production, or the
+  // local scripts/https-proxy.mjs used for browser testing), vinext
+  // constructs r.url with whatever scheme it thinks it's speaking
+  // (plain http, since that's the actual socket), while the browser's
+  // real Origin header correctly says https. A scheme mismatch here
+  // isn't a cross-site request — the host match is what actually rules
+  // that out.
+  const expectedHost = r.headers.get("x-forwarded-host") ?? new URL(r.url).host;
+  if (o && new URL(o).host !== expectedHost) throw new Error("不正なリクエストです");
   if (r.headers.get("sec-fetch-site") === "cross-site")
     throw new Error("不正なリクエストです");
 }

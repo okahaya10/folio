@@ -8,18 +8,28 @@ assert.equal(hostRole("example.com"), "app");
 assert.equal(hostRole("localhost"), "app");
 assert.equal(hostRole("admin"), "admin"); // bare host, e.g. local testing
 
-// Admin host: only /admin* and /api/admin* are reachable.
+// Admin host: /admin*, /api/admin*, and Auth.js's own routes (so the
+// owner can actually log in there) are reachable; the client app's own
+// pages/API are not.
 assert.equal(isPathAllowed("admin", "/admin"), true);
 assert.equal(isPathAllowed("admin", "/admin/tenants"), true);
 assert.equal(isPathAllowed("admin", "/api/admin/contract"), true);
+assert.equal(isPathAllowed("admin", "/login"), true);
+assert.equal(isPathAllowed("admin", "/api/auth/session"), true);
+assert.equal(isPathAllowed("admin", "/api/auth/callback/credentials"), true);
 assert.equal(isPathAllowed("admin", "/"), false);
 assert.equal(isPathAllowed("admin", "/api/workspace"), false);
 
-// Client host: everything except /admin* is reachable.
+// Client host: everything except /admin* and /api/admin* is reachable
+// (Auth.js's own routes stay reachable here too — each host's login is
+// independent, scoped by the browser's own per-hostname cookie jar).
 assert.equal(isPathAllowed("app", "/"), true);
 assert.equal(isPathAllowed("app", "/api/workspace"), true);
+assert.equal(isPathAllowed("app", "/login"), true);
+assert.equal(isPathAllowed("app", "/api/auth/session"), true);
 assert.equal(isPathAllowed("app", "/admin"), false);
 assert.equal(isPathAllowed("app", "/admin/tenants"), false);
+assert.equal(isPathAllowed("app", "/api/admin/contract"), false);
 // A path that merely starts with "admin" but isn't the /admin
 // boundary (e.g. "/administration") must not be blocked by accident.
 assert.equal(isPathAllowed("app", "/administration"), true);

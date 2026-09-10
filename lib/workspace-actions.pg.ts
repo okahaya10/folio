@@ -1,4 +1,5 @@
 import { empty, must, sample, text } from "./domain";
+import { hashPassword } from "./auth-credentials";
 import type { QueryFn } from "./workspace-mutation.pg";
 
 // Postgres port of the setup/membership actions in
@@ -88,14 +89,71 @@ export async function createTenant(query: QueryFn, userId: string, email: string
   return { id };
 }
 
+async function requirePlatformAdmin(query: QueryFn, userId: string) {
+  const { rows } = await query('SELECT id FROM platform WHERE "user" = $1', [userId]);
+  must(rows.length > 0, "運営管理者のみ操作できます");
+}
+
+// Owner-only: issues a brand-new client account (email+password login)
+// and its company in one step, for clients who don't have an account
+// yet — unlike acceptInvite/createTenant, which assume the person
+// accepting/creating already has one. The returned password is shown
+// once in the admin UI for the owner to hand to the client; nothing
+// stores it in plain text.
+export async function grantAccount(
+  query: QueryFn,
+  actorUserId: string,
+  input: { companyName: string; email: string; password: string; contactName?: string },
+) {
+  await requirePlatformAdmin(query, actorUserId);
+  const email = text(input.email).toLowerCase();
+  must(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), "メールアドレスを確認してください");
+  const companyName = text(input.companyName);
+  must(companyName, "会社名を入力してください");
+  must(input.password && input.password.length >= 8, "パスワードは8文字以上にしてください");
+
+  const { rows: existing } = await query("SELECT id FROM users WHERE lower(email) = $1", [email]);
+  must(existing.length === 0, "このメールアドレスはすでに使われています");
+
+  const userId = crypto.randomUUID();
+  const passwordHash = await hashPassword(input.password);
+  const name = text(input.contactName) || companyName;
+  await query(
+    "INSERT INTO users(id,email,password_hash,name,created) VALUES($1,$2,$3,$4,$5)",
+    [userId, email, passwordHash, name, new Date().toISOString()],
+  );
+  const tenantId = crypto.randomUUID();
+  await query(
+    "INSERT INTO tenants(id,name,owner,data,created) VALUES($1,$2,$3,$4,$5)",
+    [tenantId, companyName, userId, JSON.stringify(empty(companyName)), new Date().toISOString()],
+  );
+  await query("INSERT INTO members(tenant,\"user\",email,role) VALUES($1,$2,$3,'owner')", [
+    tenantId,
+    userId,
+    email,
+  ]);
+  return { tenantId, email };
+}
+
+export async function listTenantsForAdmin(query: QueryFn, actorUserId: string) {
+  await requirePlatformAdmin(query, actorUserId);
+  const { rows } = await query(
+    `SELECT t.id, t.name, t.status, t.plan, t.created, u.email AS owner_email
+     FROM tenants t
+     LEFT JOIN users u ON u.id = t.owner
+     ORDER BY t.created DESC`,
+    [],
+  );
+  return rows;
+}
+
 export async function setContract(
   query: QueryFn,
   userId: string,
   tenantId: string,
   status: string,
 ) {
-  const { rows } = await query("SELECT id FROM platform WHERE \"user\" = $1", [userId]);
-  must(rows.length > 0, "運営管理者のみ操作できます");
+  await requirePlatformAdmin(query, userId);
   must(["active", "read_only", "suspended"].includes(status), "状態を確認してください");
   await query("UPDATE tenants SET status = $1 WHERE id = $2", [status, tenantId]);
   return { ok: true };
