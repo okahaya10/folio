@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import postgres from "postgres";
-import { verifyCredentials } from "./auth-credentials";
+import { jwtCallback, sessionCallback, verifyCredentials } from "./auth-credentials";
 
 // Sakura VPS auth. Not wired into any route yet — this is scaffolding,
 // exercised only by tests/auth-credentials.test.ts until the app is
@@ -29,4 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  callbacks: {
+    jwt: jwtCallback as any,
+    session: sessionCallback as any,
+  },
 });

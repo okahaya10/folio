@@ -14,6 +14,27 @@ export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
 
+// NextAuth's JWT session strategy doesn't put the user id on the
+// session by default — these two callbacks thread it through
+// token -> session. Plain functions (NextAuth's actual shapes are
+// wider; only the fields used here) so the id-propagation logic can
+// be unit-tested without a running auth() request cycle.
+export function jwtCallback(params: {
+  token: Record<string, unknown>;
+  user?: AuthUser | null;
+}) {
+  if (params.user) params.token.id = params.user.id;
+  return params.token;
+}
+
+export function sessionCallback(params: {
+  session: { user?: Record<string, unknown> };
+  token: Record<string, unknown>;
+}) {
+  if (params.session.user) params.session.user.id = params.token.id;
+  return params.session;
+}
+
 export async function verifyCredentials(
   query: QueryFn,
   email: string,
