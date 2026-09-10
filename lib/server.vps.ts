@@ -19,6 +19,17 @@ export function pg() {
   return sql;
 }
 
+// Adapts pg()'s tagged-template client to the plain QueryFn shape
+// lib/workspace-mutation.pg.ts and lib/workspace-actions.pg.ts expect
+// (same shape PGlite's db.query() returns natively, which is what
+// those modules' tests run against — sql.unsafe() returns the rows
+// directly, not wrapped in `.rows`, so that's the one thing this
+// adapter has to bridge). Verified against a real local Postgres, not
+// just PGlite — see tests/real_postgres_smoke_test.ts.
+export const pgQuery = async (text: string, params: unknown[]) => ({
+  rows: await pg().unsafe(text, params as any[]),
+});
+
 let storage: FileStorage | null = null;
 export function bucket(): FileStorage {
   if (!storage) storage = new FsStorage(process.env.STORAGE_ROOT ?? "./storage");
