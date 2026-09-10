@@ -9,6 +9,20 @@ import {
 // (the current D1/SQLite schema) column-for-column so lib/server.ts's
 // existing SQL statements need minimal changes when the D1 client is
 // swapped for a Postgres client.
+//
+// `users` is new: OpenAI Sites authenticated members via ChatGPT
+// headers, so there was no local credential store. Auth.js needs one
+// for email+password login. `id` matches the `user` column already
+// used throughout tenants/members/invitations/platform (a stable
+// string id), so no other table needs to change shape.
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  name: text("name").notNull(),
+  created: text("created").notNull(),
+});
+
 export const tenants = pgTable("tenants", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
