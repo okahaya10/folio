@@ -47,3 +47,5 @@ next-env.d.ts
 /work/
 /.test-output/
 *.tsbuildinfo
+# Local Sakura VPS dev artifacts
+/.local-storage/

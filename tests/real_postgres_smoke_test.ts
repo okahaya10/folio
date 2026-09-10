@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import postgres from "postgres";
+import { Pool } from "pg";
 import { empty } from "../lib/domain";
 import { bootstrap, createTenant } from "../lib/workspace-actions.pg";
 import { fetchTenant, mutateWorkspace } from "../lib/workspace-mutation.pg";
@@ -16,15 +16,13 @@ if (!url) {
   process.exit(0);
 }
 
-const sql = postgres(url);
-const query = async (text: string, params: unknown[]) => ({
-  rows: await sql.unsafe(text, params as any[]),
-});
+const pool = new Pool({ connectionString: url });
+const query = (text: string, params: unknown[]) => pool.query(text, params);
 
 // Clean slate for this test's own rows (safe to run repeatedly).
-await sql`DELETE FROM members WHERE "user" LIKE 'smoke-%'`;
-await sql`DELETE FROM tenants WHERE id LIKE 'demo-smoke-%' OR owner LIKE 'smoke-%'`;
-await sql`DELETE FROM platform WHERE "user" LIKE 'smoke-%'`;
+await pool.query(`DELETE FROM members WHERE "user" LIKE 'smoke-%'`);
+await pool.query(`DELETE FROM tenants WHERE id LIKE 'demo-smoke-%' OR owner LIKE 'smoke-%'`);
+await pool.query(`DELETE FROM platform WHERE "user" LIKE 'smoke-%'`);
 
 const owner = "smoke-owner-" + Date.now();
 const boot = await bootstrap(query, owner, owner + "@example.com");
@@ -50,9 +48,9 @@ const state = JSON.parse(t.data as string);
 assert.equal(state.customers[0].name, "実機確認 顧客A");
 
 // Clean up after ourselves.
-await sql`DELETE FROM members WHERE "user" LIKE 'smoke-%'`;
-await sql`DELETE FROM tenants WHERE id LIKE 'demo-smoke-%' OR owner LIKE 'smoke-%'`;
-await sql`DELETE FROM platform WHERE "user" LIKE 'smoke-%'`;
+await pool.query(`DELETE FROM members WHERE "user" LIKE 'smoke-%'`);
+await pool.query(`DELETE FROM tenants WHERE id LIKE 'demo-smoke-%' OR owner LIKE 'smoke-%'`);
+await pool.query(`DELETE FROM platform WHERE "user" LIKE 'smoke-%'`);
 
 console.log("Real PostgreSQL smoke test passed (bootstrap, createTenant, mutateWorkspace round trip)");
-await sql.end();
+await pool.end();

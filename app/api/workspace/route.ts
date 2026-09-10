@@ -1,13 +1,24 @@
-import {db,tenant,identity,fail,json,checkOrigin} from '@/lib/server';
-import {apply,empty,sample,text,must,State} from '@/lib/domain';
-async function hash(s:string){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}
-export async function GET(request:Request){try{const u=await identity();const d=db();const id=new URL(request.url).searchParams.get('tenant');const isAdmin=!!await d.prepare('SELECT id FROM platform WHERE user=?').bind(u.userId).first();const list=(await d.prepare('SELECT t.id,t.name,t.status,t.plan,m.role FROM tenants t JOIN members m ON m.tenant=t.id WHERE m.user=? ORDER BY t.created').bind(u.userId).all()).results;if(!id)return json({user:{name:u.displayName,email:u.email},tenants:list,isAdmin});const t=await tenant(id,u.userId);const members=(await d.prepare('SELECT user,email,role FROM members WHERE tenant=?').bind(id).all()).results;return json({state:JSON.parse(t.data),version:t.version,role:t.role,status:t.status,members,tenants:list,isAdmin,user:{name:u.displayName,email:u.email}})}catch(e){return fail(e)}}
-export async function POST(request:Request){try{checkOrigin(request);const u=await identity();const raw=await request.text();must(raw.length<150000,'入力内容が大きすぎます');const a=JSON.parse(raw);const d=db();
-if(a.type==='bootstrap'){await d.prepare("INSERT OR IGNORE INTO platform(id,user) VALUES('owner',?)").bind(u.userId).run();const isAdmin=!!await d.prepare('SELECT id FROM platform WHERE user=?').bind(u.userId).first();must(isAdmin,'会社管理者からの招待が必要です');const tid='demo-'+u.userId;const s=sample();await d.batch([d.prepare('INSERT OR IGNORE INTO tenants(id,name,owner,data,created) VALUES(?,?,?,?,?)').bind(tid,s.company.name,u.userId,JSON.stringify(s),new Date().toISOString()),d.prepare('INSERT OR IGNORE INTO members(tenant,user,email,role) VALUES(?,?,?,?)').bind(tid,u.userId,u.email,'owner')]);return json({id:tid})}
-if(a.type==='accept'){const memberships=await d.prepare('SELECT COUNT(*) n FROM members WHERE user=?').bind(u.userId).first<any>();must(Number(memberships?.n||0)===0,'このアカウントはすでに別の会社に所属しています');const h=await hash(text(a.token,200));const inv=await d.prepare('SELECT * FROM invitations WHERE token=? AND lower(email)=? AND expires>?').bind(h,u.email.toLowerCase(),new Date().toISOString()).first<any>();must(inv,'招待が無効、期限切れ、またはメールアドレスが一致しません');await d.batch([d.prepare('INSERT OR IGNORE INTO members(tenant,user,email,role) SELECT tenant,?,?,role FROM invitations WHERE token=? AND expires>?').bind(u.userId,u.email,h,new Date().toISOString()),d.prepare('DELETE FROM invitations WHERE token=?').bind(h)]);return json({id:inv.tenant})}
-if(a.type==='createTenant'||a.type==='contract'){const platformAdmin=!!await d.prepare('SELECT id FROM platform WHERE user=?').bind(u.userId).first();if(a.type==='contract'){must(platformAdmin,'運営管理者のみ操作できます');must(['active','read_only','suspended'].includes(a.status),'状態を確認してください');await d.prepare('UPDATE tenants SET status=? WHERE id=?').bind(a.status,a.tenant).run();return json({ok:true})}const membershipCount=await d.prepare('SELECT COUNT(*) AS count FROM members WHERE user=?').bind(u.userId).first<{count:number}>();must(Number(membershipCount?.count||0)===0,'会社アカウントは1つまでです');const name=text(a.name);must(name,'会社名を入力してください');const id=crypto.randomUUID();await d.batch([d.prepare('INSERT INTO tenants(id,name,owner,data,created) VALUES(?,?,?,?,?)').bind(id,name,u.userId,JSON.stringify(empty(name)),new Date().toISOString()),d.prepare('INSERT INTO members(tenant,user,email,role) VALUES(?,?,?,?)').bind(id,u.userId,u.email,'owner')]);return json({id})}
-const t=await tenant(text(a.tenant),u.userId);must(t.status==='active','閲覧専用のため変更できません');
-if(a.type==='invite'){must(['owner','admin'].includes(t.role),'管理者のみ招待できます');must(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text(a.email)),'メールアドレスを確認してください');must(['staff','admin'].includes(a.role),'役割を確認してください');must(t.role==='owner'||a.role==='staff','管理者の招待はオーナーが行ってください');const token=crypto.randomUUID()+crypto.randomUUID();await d.prepare('INSERT INTO invitations(token,tenant,email,role,expires) VALUES(?,?,?,?,?)').bind(await hash(token),t.id,text(a.email).toLowerCase(),a.role,new Date(Date.now()+7*86400000).toISOString()).run();return json({token})}
-if(a.type==='removeMember'){must(['owner','admin'].includes(t.role),'管理者のみ操作できます');const m=await d.prepare('SELECT role FROM members WHERE tenant=? AND user=?').bind(t.id,a.user).first<any>();must(m&&m.role!=='owner'&&(t.role==='owner'||m.role==='staff'),'このメンバーは解除できません');await d.prepare('DELETE FROM members WHERE tenant=? AND user=?').bind(t.id,a.user).run();return json({ok:true})}
-const s:State=JSON.parse(t.data);must(typeof a.requestId==='string'&&a.requestId.length<=100,'リクエストIDが必要です');if(s.processed.includes(a.requestId))return json({ok:true,repeated:true});must(a.version===t.version,'他の操作で更新されました。再読み込み後にやり直してください');const result=apply(s,a,u.email,t.role);s.processed.push(a.requestId);const data=JSON.stringify(s);must(new TextEncoder().encode(data).length<900000,'保存上限に近づきました。運営者にお問い合わせください');const r=await d.prepare('UPDATE tenants SET data=?,name=?,version=version+1 WHERE id=? AND version=? AND status=\'active\' AND EXISTS (SELECT 1 FROM members WHERE tenant=? AND user=? AND role=?)').bind(data,s.company.name,t.id,t.version,t.id,u.userId,t.role).run();must(r.meta.changes===1,'他の操作で更新されました。再読み込み後にやり直してください');return json(result)
-}catch(e){return fail(e)}}
+// Dispatches to the D1/ChatGPT-auth implementation (OpenAI Sites) or
+// the Postgres/Auth.js one (Sakura VPS) based on DATABASE_URL at
+// runtime. Both branches are still bundled together (vinext's
+// file-based router must import every route up front, same
+// architectural constraint as Next.js itself — a build-time constant
+// here doesn't let Rollup prove either branch dead, that was tried and
+// didn't pan out, see git history), so keeping workspace-d1.ts's
+// `cloudflare:workers` reference out of the Sakura VPS bundle is
+// scripts/build-vps.mjs's job (temporarily stubs workspace-d1.ts /
+// document-d1.ts / stamp-d1.ts during that build only, restored after
+// — see that script's comment for the full reasoning).
+export async function GET(request: Request) {
+  const mod = process.env.DATABASE_URL
+    ? await import("./workspace-pg")
+    : await import("./workspace-d1");
+  return mod.GET(request);
+}
+
+export async function POST(request: Request) {
+  const mod = process.env.DATABASE_URL
+    ? await import("./workspace-pg")
+    : await import("./workspace-d1");
+  return mod.POST(request);
+}
