@@ -1,0 +1,74 @@
+# Sakura VPS deployment. Not run/tested locally (no Docker in the
+# development environment used to write this) — verify with
+# `docker compose config` and a full `docker compose up` before relying
+# on it. See .env.example for the variables it reads.
+#
+# First-time cert issuance (nginx/folio.conf references certs that
+# don't exist yet, so it will fail to start as written):
+#   1. Comment out both `server { listen 443 ... }` blocks in
+#      nginx/folio.conf, keep only the :80 block.
+#   2. docker compose up -d nginx
+#   3. docker compose run --rm certbot certonly --webroot \
+#        -w /var/www/certbot -d app.example.com -d admin.example.com
+#   4. Uncomment the 443 blocks back in, docker compose restart nginx.
+#   5. docker compose up -d (starts postgres/app/certbot's renew loop).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: folio
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD}@postgres:5432/folio
+      STORAGE_ROOT: /data/storage
+      AUTH_SECRET: ${AUTH_SECRET}
+    volumes:
+      - storage-data:/data/storage
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/folio.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+
+  # Issues/renews the two subdomains' certificates. Run once manually
+  # for the initial issuance (see README note below), then this
+  # service just renews on its own schedule.
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    entrypoint: >
+      sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h; done'
+
+volumes:
+  postgres-data:
+  storage-data:
+  certbot-www:
+  certbot-certs:
