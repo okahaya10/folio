@@ -1712,19 +1712,19 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                         <Field label="単価（税抜）">
                           <input
                             type="text"
-                            inputMode="numeric"
+                            inputMode="text"
                             value={item.price || ""}
-                            placeholder="金額を入力"
-                            onChange={(e) =>
+                            placeholder="値引きは -1000 のように入力"
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (!/^-?\d*$/.test(raw)) return;
                               setForm({
                                 ...form,
                                 items: form.items.map((x: Item, j: number) =>
-                                  j === i
-                                    ? { ...x, price: Number(e.target.value) }
-                                    : x,
+                                  j === i ? { ...x, price: raw as any } : x,
                                 ),
-                              })
-                            }
+                              });
+                            }}
                           />
                         </Field>
                         <Field label="税率">

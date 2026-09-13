@@ -107,7 +107,7 @@ export function items(raw: unknown): Item[] {
         q <= 10000 &&
         Math.abs(q * 100 - Math.round(q * 100)) < 0.00001 &&
         Number.isSafeInteger(p) &&
-        p >= 0 &&
+        p >= -100000000 &&
         p <= 100000000 &&
         [0, 8, 10].includes(r),
       "明細の品目・数量・単価・税率を確認してください",
@@ -136,7 +136,10 @@ export function totals(rows: Item[]) {
     taxes[r] = Math.floor((n * Number(r)) / 100);
     tax += taxes[r];
   }
-  must(subtotal + tax <= 1000000000, "合計金額は10億円以内で入力してください");
+  must(
+    subtotal + tax <= 1000000000 && subtotal + tax >= -1000000000,
+    "合計金額は10億円以内で入力してください",
+  );
   return { subtotal, tax, total: subtotal + tax, taxes };
 }
 export function empty(name: string, demo = false): State {

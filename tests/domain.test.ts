@@ -20,6 +20,8 @@ assert.equal(totals([{ ...one(25000), quantity: 2 }]).total, 55000);
 assert.equal(totals([one(15), one(15), one(15)]).tax, 4);
 assert.throws(() => items([{ ...one(5), quantity: -1 }]));
 assert.throws(() => items([{ ...one(5), rate: 12 }]));
+assert.equal(totals([one(10000), one(-1000)]).total, 9900);
+assert.equal(items([one(-1000)])[0].price, -1000);
 const c = apply(
   s,
   { type: "customer", name: "顧客 A", notes: "メモ：要注意先" },
