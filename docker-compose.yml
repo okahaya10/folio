@@ -36,9 +36,11 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD}@postgres:5432/folio
+      # URL-encoded variant — see docker-compose.shared-host.yml for why.
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD_URLENC}@postgres:5432/folio
       STORAGE_ROOT: /data/storage
       AUTH_SECRET: ${AUTH_SECRET}
+      ADMIN_HOST: ${ADMIN_HOST}
     volumes:
       - storage-data:/data/storage
 

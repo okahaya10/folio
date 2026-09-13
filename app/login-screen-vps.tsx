@@ -1,7 +1,7 @@
 import { Building2, FileText, Receipt } from "lucide-react";
 import LoginFormVps from "./login-form-vps";
 
-export default function LoginScreenVps() {
+export default function LoginScreenVps({ redirectTo }: { redirectTo: string }) {
   return (
     <main className="login-page">
       <section className="login-brand-panel">
@@ -24,7 +24,7 @@ export default function LoginScreenVps() {
           <p className="eyebrow">WELCOME TO FOLIO</p>
           <h2>会社アカウントへログイン</h2>
           <p className="login-help">メールアドレスとパスワードでログインします。</p>
-          <LoginFormVps />
+          <LoginFormVps redirectTo={redirectTo} />
         </div>
       </section>
     </main>

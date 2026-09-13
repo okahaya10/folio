@@ -10,9 +10,9 @@ export default async function Home() {
     const user = await vpsSessionUser();
     if (!user) {
       const { default: LoginScreenVps } = await import("./login-screen-vps");
-      return <LoginScreenVps />;
+      return <LoginScreenVps redirectTo="/" />;
     }
-    return <Workspace />;
+    return <Workspace authMode="vps" />;
   }
   const { getChatGPTUser } = await import("./chatgpt-auth");
   const user = await getChatGPTUser();

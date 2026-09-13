@@ -6,7 +6,7 @@ import { hostRole, isPathAllowed } from "./lib/host-routing";
 // request object).
 export function proxy(request: NextRequest) {
   const hostname = request.headers.get("host")?.split(":")[0] ?? "";
-  const role = hostRole(hostname);
+  const role = hostRole(hostname, process.env.ADMIN_HOST);
   if (!isPathAllowed(role, request.nextUrl.pathname)) {
     return new NextResponse(null, { status: 404 });
   }

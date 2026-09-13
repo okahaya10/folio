@@ -271,7 +271,7 @@ function Field({
     </label>
   );
 }
-export default function Workspace() {
+export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
   const [state, setState] = useState<State | null>(null),
     [tenants, setTenants] = useState<any[]>([]),
     [tenantId, setTenantId] = useState(""),
@@ -809,9 +809,35 @@ export default function Workspace() {
                     : "スタッフ"}
               </small>
             </div>
-            <a href="/signout-with-chatgpt?return_to=/" title="ログアウト">
-              <LogOut size={16} />
-            </a>
+            {authMode === "vps" ? (
+              <button
+                type="button"
+                title="ログアウト"
+                onClick={async () => {
+                  try {
+                    const csrfRes = await fetch("/api/auth/csrf");
+                    const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+                    await fetch("/api/auth/signout", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                      body: new URLSearchParams({ csrfToken, json: "true" }),
+                    });
+                  } catch {
+                    // Fall through to the reload below regardless — if
+                    // signout genuinely didn't reach the server, page.tsx's
+                    // own session check on "/" will just show the login
+                    // screen again and the user can retry.
+                  }
+                  window.location.href = "/";
+                }}
+              >
+                <LogOut size={16} />
+              </button>
+            ) : (
+              <a href="/signout-with-chatgpt?return_to=/" title="ログアウト">
+                <LogOut size={16} />
+              </a>
+            )}
           </div>
         </SidebarFooter>
       </Sidebar>

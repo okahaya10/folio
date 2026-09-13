@@ -492,9 +492,14 @@ nav button:hover {
   font-size: 11px;
   color: #8294b1;
 }
-.user-row a {
+.user-row a,
+.user-row button {
   padding: 8px;
   color: #8193b2;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: flex;
 }
 .breadcrumb,
 .topbar-right {

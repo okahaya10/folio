@@ -10,7 +10,7 @@ import { ArrowRight } from "lucide-react";
 // pending state — confirmed via DevTools). This bypasses whatever
 // that incompatibility is; the same /api/auth/callback/credentials
 // flow is independently verified working via curl.
-export default function LoginFormVps() {
+export default function LoginFormVps({ redirectTo }: { redirectTo: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -39,7 +39,7 @@ export default function LoginFormVps() {
       const sessionRes = await fetch("/api/auth/session");
       const session = (await sessionRes.json().catch(() => null)) as { user?: unknown } | null;
       if (session?.user) {
-        window.location.href = "/";
+        window.location.href = redirectTo;
         return;
       }
       setError("メールアドレスまたはパスワードが違います");

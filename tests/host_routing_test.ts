@@ -8,6 +8,13 @@ assert.equal(hostRole("example.com"), "app");
 assert.equal(hostRole("localhost"), "app");
 assert.equal(hostRole("admin"), "admin"); // bare host, e.g. local testing
 
+// Explicit ADMIN_HOST override — needed in production when the admin
+// subdomain isn't literally named "admin" (e.g. "app.<domain>" was
+// already taken by another app on the same shared VPS).
+assert.equal(hostRole("folio-admin.stappo.jp", "folio-admin.stappo.jp"), "admin");
+assert.equal(hostRole("FOLIO-ADMIN.stappo.jp", "folio-admin.stappo.jp"), "admin"); // case-insensitive
+assert.equal(hostRole("folio-app.stappo.jp", "folio-admin.stappo.jp"), "app");
+
 // Admin host: /admin*, /api/admin*, and Auth.js's own routes (so the
 // owner can actually log in there) are reachable; the client app's own
 // pages/API are not.

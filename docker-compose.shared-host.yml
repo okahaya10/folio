@@ -1,0 +1,51 @@
+# Variant of docker-compose.yml for a VPS that already runs its own
+# nginx + Certbot for other sites (ports 80/443 already bound to the
+# host nginx, not available to a container). No nginx/certbot services
+# here — add app./admin. server blocks to the host's own nginx instead
+# (proxy_pass to 127.0.0.1:${APP_PORT}, matching how its other sites
+# are already configured), and run `certbot --nginx` for those two
+# hostnames the normal way. The app is bound to 127.0.0.1 only, never
+# exposed on the public interface directly — only the host nginx can
+# reach it.
+#
+# Usage: docker compose -f docker-compose.shared-host.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: folio
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # URL-encoded variant, since a raw password containing characters
+      # like "/" breaks postgres connection-string parsing otherwise
+      # (silently misparses the host, causing EAI_AGAIN on a garbage
+      # hostname instead of an auth error).
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD_URLENC}@postgres:5432/folio
+      STORAGE_ROOT: /data/storage
+      AUTH_SECRET: ${AUTH_SECRET}
+      ADMIN_HOST: ${ADMIN_HOST}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8090}:3000"
+    volumes:
+      - storage-data:/data/storage
+
+volumes:
+  postgres-data:
+  storage-data:

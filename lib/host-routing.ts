@@ -5,8 +5,17 @@
 // object) so the rules can be unit-tested without a running server.
 export type HostRole = "admin" | "app";
 
-export function hostRole(hostname: string): HostRole {
-  const label = hostname.split(".")[0]?.toLowerCase() ?? "";
+// `adminHost` is the exact hostname configured as the admin site (e.g.
+// via the ADMIN_HOST env var) — required in production since the
+// admin/app subdomain names aren't guaranteed to literally be
+// "admin"/"app" (this deployment uses folio-admin./folio-app. because
+// app.<domain> was already taken by another app on the same VPS). The
+// "admin" first-label convention is kept as a fallback for local
+// dev/testing where no explicit host is configured.
+export function hostRole(hostname: string, adminHost?: string): HostRole {
+  const host = hostname.toLowerCase();
+  if (adminHost && host === adminHost.toLowerCase()) return "admin";
+  const label = host.split(".")[0] ?? "";
   return label === "admin" ? "admin" : "app";
 }
 
