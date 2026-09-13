@@ -116,6 +116,7 @@ function drawPage(
     ],
     ["ＴＥＬ：", d.company.phone],
     ["登録番号：", normalizeInvoiceNumber(d.company.registration)],
+    ...(d.kind === "estimate" ? [["担　当：", d.company.contact]] : []),
   ].filter(([, value]) => Boolean(value));
   companyRows.forEach(([label, value], i) => {
     const y = 738 - i * 15;
