@@ -325,6 +325,11 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
     [reason, setReason] = useState(""),
     [deleteId, setDeleteId] = useState(""),
     [inviteLink, setInviteLink] = useState("");
+  const [quickCustomer, setQuickCustomer] = useState<{
+    name: string;
+    contact: string;
+  } | null>(null);
+  const [quickCustomerBusy, setQuickCustomerBusy] = useState(false);
   const requestId = useRef("");
   const current = state?.docs.find((d) => d.id === detail);
   const canManage = ["owner", "admin"].includes(role);
@@ -434,6 +439,7 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
   const open = (type: string, doc?: Doc) => {
     requestId.current = crypto.randomUUID();
     setInviteLink("");
+    setQuickCustomer(null);
     if (["estimate", "invoice", "receipt"].includes(type))
       setForm({
         kind: type,
@@ -1590,16 +1596,84 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
               <>
                 <div className="form-grid">
                   <Field label="取引先 *" wide>
-                    <Choose
-                      value={form.customerId || ""}
-                      onChange={(v) => setForm({ ...form, customerId: v })}
-                      options={(state?.customers || []).map((c) => ({
-                        value: c.id,
-                        label: c.name,
-                      }))}
-                    />
-                    {!state?.customers.length && (
-                      <small>先に「取引先」画面で登録してください。</small>
+                    {quickCustomer ? (
+                      <div className="quick-customer-form">
+                        <input
+                          className="login-input"
+                          value={quickCustomer.name}
+                          onChange={(e) =>
+                            setQuickCustomer({ ...quickCustomer, name: e.target.value })
+                          }
+                          placeholder="株式会社〇〇"
+                          autoFocus
+                        />
+                        <input
+                          className="login-input"
+                          value={quickCustomer.contact}
+                          onChange={(e) =>
+                            setQuickCustomer({ ...quickCustomer, contact: e.target.value })
+                          }
+                          placeholder="担当者（任意）"
+                        />
+                        <div className="quick-customer-actions">
+                          <button
+                            type="button"
+                            className="btn subtle"
+                            disabled={quickCustomerBusy}
+                            onClick={() => setQuickCustomer(null)}
+                          >
+                            取消
+                          </button>
+                          <button
+                            type="button"
+                            className="btn primary"
+                            disabled={quickCustomerBusy || !quickCustomer.name.trim()}
+                            onClick={async () => {
+                              setQuickCustomerBusy(true);
+                              try {
+                                const result = await mutate(
+                                  {
+                                    type: "customer",
+                                    name: quickCustomer.name,
+                                    contact: quickCustomer.contact,
+                                    email: "",
+                                    address: "",
+                                    notes: "",
+                                  },
+                                  true,
+                                );
+                                if (result?.id) {
+                                  setForm((f: any) => ({ ...f, customerId: result.id }));
+                                  setQuickCustomer(null);
+                                }
+                              } finally {
+                                setQuickCustomerBusy(false);
+                              }
+                            }}
+                          >
+                            追加して選択
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Choose
+                          value={form.customerId || ""}
+                          onChange={(v) => setForm({ ...form, customerId: v })}
+                          options={(state?.customers || []).map((c) => ({
+                            value: c.id,
+                            label: c.name,
+                          }))}
+                        />
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => setQuickCustomer({ name: "", contact: "" })}
+                        >
+                          <Plus size={14} />
+                          新しい取引先を追加
+                        </button>
+                      </>
                     )}
                   </Field>
                   <Field

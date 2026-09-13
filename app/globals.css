@@ -1638,6 +1638,16 @@ nav button:hover {
   font-size: 12px;
   color: #a5b1c3;
 }
+.quick-customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quick-customer-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .editor-section-heading {
   display: flex;
   align-items: center;
