@@ -154,7 +154,7 @@ export function empty(name: string, demo = false): State {
       bank: "",
       contact: "",
       verified: false,
-      itemPresets: ["家具移動", "家具家電移動", "搬入・設置"],
+      itemPresets: [],
       unitPresets: ["式", "台", "個", "人", "時間"],
       contactPresets: [],
       emailTemplates: { ...defaultEmailTemplates },

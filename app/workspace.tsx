@@ -137,7 +137,7 @@ const viewNames: Record<View, string> = {
   admin: "運営管理",
 };
 const iconMap = { estimate: FileText, invoice: Wallet, receipt: Receipt };
-const defaultItems = ["家具移動", "家具家電移動", "搬入・設置"],
+const defaultItems: string[] = [],
   defaultUnits = ["式", "台", "個", "人", "時間"];
 const japaneseDate = (value: string) => {
   const match = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
@@ -1374,9 +1374,11 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                       <p>書類作成時にプルダウンで選ぶ候補です。</p>
                       <div className="preset-preview">
                         <span>
-                          {(state.company.itemPresets || defaultItems).join(
-                            "・",
-                          )}
+                          {(state.company.itemPresets || defaultItems).length
+                            ? (state.company.itemPresets || defaultItems).join(
+                                "・",
+                              )
+                            : "未登録"}
                         </span>
                         <span>
                           {(state.company.unitPresets || defaultUnits).join(
