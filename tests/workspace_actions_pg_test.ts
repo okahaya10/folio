@@ -5,6 +5,8 @@ import {
   acceptInvite,
   bootstrap,
   createTenant,
+  deleteTenant,
+  grantAccount,
   invite,
   removeMember,
   setContract,
@@ -143,7 +145,39 @@ await assert.rejects(
   /このメンバーは解除できません/,
 );
 
+// --- deleteTenant: orphaned owner accounts are cleaned up so the same
+// email can be re-registered, but a platform admin is never deleted ---
+const granted = await grantAccount(query, "owner-1", {
+  companyName: "テスト株式会社",
+  email: "delete-me@example.com",
+  password: "password123",
+});
+await deleteTenant(query, "owner-1", granted.tenantId);
+const goneUser = await db.query("SELECT 1 FROM users WHERE lower(email) = $1", [
+  "delete-me@example.com",
+]);
+assert.equal(goneUser.rows.length, 0);
+// The same email can now be granted a fresh account.
+const regranted = await grantAccount(query, "owner-1", {
+  companyName: "テスト株式会社2",
+  email: "delete-me@example.com",
+  password: "password123",
+});
+assert.ok(regranted.tenantId);
+// Deleting a tenant owned by the platform admin (owner-1's own demo
+// tenant) must not delete owner-1's users row — they still need to
+// sign in to the admin dashboard. bootstrap() doesn't itself insert a
+// users row (that's Auth.js/seed-platform-admin.mjs's job), so insert
+// one directly to exercise the platform-admin guard.
+await db.query(
+  "INSERT INTO users(id,email,password_hash,name,created) VALUES($1,$2,$3,$4,$5)",
+  ["owner-1", "owner1@example.com", "x", "オーナー", new Date().toISOString()],
+);
+await deleteTenant(query, "owner-1", "demo-owner-1");
+const ownerStillThere = await db.query("SELECT 1 FROM users WHERE id = $1", ["owner-1"]);
+assert.equal(ownerStillThere.rows.length, 1);
+
 console.log(
-  "Workspace actions (Postgres) checks passed: bootstrap, createTenant, setContract, invite, acceptInvite, removeMember",
+  "Workspace actions (Postgres) checks passed: bootstrap, createTenant, setContract, invite, acceptInvite, removeMember, deleteTenant",
 );
 await db.close();

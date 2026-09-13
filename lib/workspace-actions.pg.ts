@@ -210,14 +210,32 @@ export async function renameTenant(
   return { ok: true };
 }
 
-// Removes a client's tenant and its memberships/invitations. Leaves the
-// owner's user row in place (an owner could belong to another tenant),
-// so this only tears down the tenant-scoped rows, not the account itself.
+// Removes a client's tenant and its memberships/invitations. If that
+// leaves the owner with no remaining tenant memberships anywhere, their
+// login (users row) is deleted too — otherwise the same email could
+// never be re-registered via grantAccount, which checks for an existing
+// users row. Platform admins are never deleted this way, even if they
+// happen to have zero memberships, since that account still needs to
+// sign in to the admin dashboard itself.
 export async function deleteTenant(query: QueryFn, actorUserId: string, tenantId: string) {
   await requirePlatformAdmin(query, actorUserId);
+  const { rows: tenantRows } = await query("SELECT owner FROM tenants WHERE id = $1", [tenantId]);
+  const ownerId = tenantRows[0]?.owner;
   await query("DELETE FROM invitations WHERE tenant = $1", [tenantId]);
   await query('DELETE FROM members WHERE tenant = $1', [tenantId]);
   await query("DELETE FROM tenants WHERE id = $1", [tenantId]);
+  if (ownerId) {
+    const { rows: remaining } = await query(
+      'SELECT COUNT(*) AS n FROM members WHERE "user" = $1',
+      [ownerId],
+    );
+    const { rows: platform } = await query('SELECT id FROM platform WHERE "user" = $1', [
+      ownerId,
+    ]);
+    if (Number(remaining[0]?.n ?? 0) === 0 && platform.length === 0) {
+      await query("DELETE FROM users WHERE id = $1", [ownerId]);
+    }
+  }
   return { ok: true };
 }
 
