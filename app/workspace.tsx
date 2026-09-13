@@ -2508,6 +2508,18 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                           <ArrowRight size={16} />
                         </button>
                       )}
+                      {!current.sentAt && (
+                        <button
+                          className="btn"
+                          onClick={() => open("edit", current)}
+                          disabled={
+                            !canWrite ||
+                            (current.kind !== "estimate" && !canManage)
+                          }
+                        >
+                          編集する
+                        </button>
+                      )}
                       <button
                         className="btn"
                         onClick={() => {

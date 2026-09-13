@@ -322,11 +322,13 @@ export function apply(s: State, a: any, actor: string, role: string): any {
     must(customer, "取引先を選択してください");
     const rs = items(a.items);
     const prior = a.id ? get(a.id) : null;
-    must(!prior || prior.status === "draft", "発行済みの書類は編集できません");
+    must(!prior || !prior.sentAt, "送付済みの書類は編集できません");
+    must(!prior || prior.status !== "cancelled", "取消済みの書類は編集できません");
+    const wasIssued = prior?.status === "issued";
     const d: Doc = {
       id: prior?.id || id(),
       kind,
-      number: "下書き",
+      number: wasIssued ? prior!.number : "下書き",
       customerId: customer.id,
       customer: { ...customer },
       title: text(a.title) || labels[kind],
@@ -334,10 +336,10 @@ export function apply(s: State, a: any, actor: string, role: string): any {
       due: a.due ? validDate(a.due) : "",
       items: rs,
       notes: text(a.notes, 3000),
-      status: "draft",
+      status: wasIssued ? "issued" : "draft",
       ...totals(rs),
       company: { ...s.company },
-      createdAt: new Date().toISOString(),
+      createdAt: prior?.createdAt || new Date().toISOString(),
     };
     if (a.issue) {
       must(s.company.verified, "設定で会社情報を確認済みにしてください");
@@ -346,9 +348,11 @@ export function apply(s: State, a: any, actor: string, role: string): any {
         must(a.received === true, "実際の受領を確認してください");
       }
       d.status = "issued";
-      const key = kind + "-" + d.date.slice(0, 4);
-      s.seq[key] = (s.seq[key] || 0) + 1;
-      d.number = `${kind === "estimate" ? "EST" : kind === "invoice" ? "INV" : "REC"}-${d.date.slice(0, 4)}-${String(s.seq[key]).padStart(6, "0")}`;
+      if (!wasIssued) {
+        const key = kind + "-" + d.date.slice(0, 4);
+        s.seq[key] = (s.seq[key] || 0) + 1;
+        d.number = `${kind === "estimate" ? "EST" : kind === "invoice" ? "INV" : "REC"}-${d.date.slice(0, 4)}-${String(s.seq[key]).padStart(6, "0")}`;
+      }
     }
     s.docs = prior
       ? s.docs.map((x) => (x.id === prior.id ? d : x))

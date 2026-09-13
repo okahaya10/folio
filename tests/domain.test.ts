@@ -89,6 +89,40 @@ const a = {
 const inv = apply(s, a, "owner", "owner");
 assert.equal(s.docs[0].total, 55000);
 assert.equal(s.docs[0].due, "");
+const invNumber = s.docs.find((d) => d.id === inv.id)!.number;
+apply(
+  s,
+  {
+    type: "document",
+    id: inv.id,
+    kind: "invoice",
+    customerId: c.id,
+    date: "2026-09-10",
+    items: [one(50000), one(-1000)],
+    issue: true,
+  },
+  "owner",
+  "owner",
+);
+assert.equal(s.docs.find((d) => d.id === inv.id)!.number, invNumber);
+assert.equal(s.docs.find((d) => d.id === inv.id)!.total, 53900);
+apply(s, { type: "sent", id: inv.id }, "owner", "owner");
+assert.throws(() =>
+  apply(
+    s,
+    {
+      type: "document",
+      id: inv.id,
+      kind: "invoice",
+      customerId: c.id,
+      date: "2026-09-10",
+      items: [one(1000)],
+      issue: true,
+    },
+    "owner",
+    "owner",
+  ),
+);
 assert.throws(() =>
   apply(
     s,
