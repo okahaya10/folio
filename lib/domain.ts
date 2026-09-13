@@ -38,6 +38,7 @@ export type Doc = {
 };
 export type Company = {
   name: string;
+  postalCode: string;
   address: string;
   phone: string;
   email: string;
@@ -48,6 +49,7 @@ export type Company = {
   verified: boolean;
   itemPresets?: string[];
   unitPresets?: string[];
+  contactPresets?: string[];
   emailTemplates?: Record<Kind, string>;
 };
 export type State = {
@@ -141,6 +143,7 @@ export function empty(name: string, demo = false): State {
   return {
     company: {
       name,
+      postalCode: "",
       address: "",
       phone: "",
       email: "",
@@ -150,6 +153,7 @@ export function empty(name: string, demo = false): State {
       verified: false,
       itemPresets: ["家具移動", "家具家電移動", "搬入・設置"],
       unitPresets: ["式", "台", "個", "人", "時間"],
+      contactPresets: [],
       emailTemplates: { ...defaultEmailTemplates },
     },
     customers: [],
@@ -266,11 +270,12 @@ export function apply(s: State, a: any, actor: string, role: string): any {
     must(text(c.name), "会社名を入力してください");
     must(
       !c.registration || /^T\d{13}$/.test(c.registration),
-      "登録番号はTと13桁の数字です",
+      "登録番号はTと半角数字13桁で入力してください",
     );
     s.company = {
       ...s.company,
       name: text(c.name),
+      postalCode: text(c.postalCode, 10),
       address: text(c.address),
       phone: text(c.phone),
       email: text(c.email),
@@ -290,6 +295,7 @@ export function apply(s: State, a: any, actor: string, role: string): any {
     };
     s.company.itemPresets = clean(a.itemPresets, 100);
     s.company.unitPresets = clean(a.unitPresets, 10);
+    s.company.contactPresets = clean(a.contactPresets ?? [], 100);
   } else if (a.type === "emailTemplates") {
     must(admin, "管理者のみ変更できます");
     const templates = a.templates || {};

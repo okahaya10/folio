@@ -108,7 +108,12 @@ function drawPage(
   const companyX = 355;
   const companyRows = [
     ["会社名：", d.company.name],
-    ["住　所：", d.company.address],
+    [
+      "住　所：",
+      d.company.postalCode
+        ? `〒${d.company.postalCode} ${d.company.address}`
+        : d.company.address,
+    ],
     ["ＴＥＬ：", d.company.phone],
     ["登録番号：", normalizeInvoiceNumber(d.company.registration)],
   ].filter(([, value]) => Boolean(value));

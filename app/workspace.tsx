@@ -426,6 +426,7 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
       setForm({
         itemPresets: (state?.company.itemPresets || []).join("\n"),
         unitPresets: (state?.company.unitPresets || []).join("\n"),
+        contactPresets: (state?.company.contactPresets || []).join("\n"),
       });
     else if (type === "emailTemplates")
       setForm({
@@ -1231,6 +1232,7 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                     <dl className="company-details">
                       {[
                         ["会社名", state.company.name],
+                        ["郵便番号", state.company.postalCode],
                         ["住所", state.company.address],
                         ["電話番号", state.company.phone],
                         ["メール", state.company.email],
@@ -1339,7 +1341,7 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                       <Layers size={21} />
                     </div>
                     <div>
-                      <h2>項目・単位</h2>
+                      <h2>項目・単位・担当者</h2>
                       <p>書類作成時にプルダウンで選ぶ候補です。</p>
                       <div className="preset-preview">
                         <span>
@@ -1352,6 +1354,11 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                             "・",
                           )}
                         </span>
+                        {!!state.company.contactPresets?.length && (
+                          <span>
+                            {state.company.contactPresets.join("・")}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button
@@ -1843,21 +1850,43 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                 <div className="form-grid">
                   {[
                     ["会社名 *", "name"],
-                    ["担当者", "contact"],
+                    ["郵便番号", "postalCode"],
                     ["住所", "address"],
                     ["電話番号", "phone"],
                     ["メール", "email"],
-                    ["登録番号（T＋13桁）", "registration"],
                   ].map(([l, k]) => (
                     <Field label={l} key={k} wide={k === "address"}>
                       <input
                         value={form[k] || ""}
+                        placeholder={k === "postalCode" ? "123-4567" : undefined}
                         onChange={(e) =>
                           setForm({ ...form, [k]: e.target.value })
                         }
                       />
                     </Field>
                   ))}
+                  <Field label="担当者">
+                    <PresetInput
+                      value={form.contact || ""}
+                      onChange={(v) => setForm({ ...form, contact: v })}
+                      options={state?.company.contactPresets || []}
+                      placeholder="選択または直接入力"
+                      label="担当者"
+                    />
+                    <small>
+                      候補は「項目・メール設定」画面でまとめて登録できます。
+                    </small>
+                  </Field>
+                  <Field label="登録番号（T＋半角数字13桁）">
+                    <input
+                      value={form.registration || ""}
+                      placeholder="T1234567890123"
+                      onChange={(e) =>
+                        setForm({ ...form, registration: e.target.value })
+                      }
+                    />
+                    <small>全角数字は登録できません。半角で入力してください。</small>
+                  </Field>
                   <Field label="振込先" wide>
                     <textarea
                       rows={3}
@@ -1898,6 +1927,16 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                       setForm({ ...form, unitPresets: e.target.value })
                     }
                     placeholder={"式\n台\n個\n人\n時間"}
+                  />
+                </Field>
+                <Field label="担当者の候補" wide>
+                  <textarea
+                    rows={5}
+                    value={form.contactPresets || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, contactPresets: e.target.value })
+                    }
+                    placeholder={"田中\n山田\n佐藤"}
                   />
                 </Field>
               </div>
@@ -2100,6 +2139,7 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                       type: "presets",
                       itemPresets: String(form.itemPresets || "").split(/\n/),
                       unitPresets: String(form.unitPresets || "").split(/\n/),
+                      contactPresets: String(form.contactPresets || "").split(/\n/),
                     });
                   else if (modal === "emailTemplates")
                     await mutate({
