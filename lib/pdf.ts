@@ -103,7 +103,12 @@ function drawPage(
         ? "下記のとおり、ご請求申し上げます。"
         : "下記の金額を正に領収いたしました。";
   write(intro, 42, 707, 9, muted);
-  write("件名：" + fit(d.title, 250, 10), 42, 684, 10);
+  write(
+    (d.kind === "receipt" ? "但し書き：" : "件名：") + fit(d.title, 250, 10),
+    42,
+    684,
+    10,
+  );
 
   const companyX = 355;
   const companyRows = [

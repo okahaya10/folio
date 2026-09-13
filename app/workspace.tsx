@@ -41,6 +41,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -270,6 +271,33 @@ function Field({
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+function SidebarNavButton({
+  active,
+  onClick,
+  icon: Icon,
+  iconSize = 18,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ size?: number }>;
+  iconSize?: number;
+  children: React.ReactNode;
+}) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <button
+      className={active ? "active" : ""}
+      onClick={() => {
+        onClick();
+        if (isMobile) setOpenMobile(false);
+      }}
+    >
+      <Icon size={iconSize} />
+      {children}
+    </button>
   );
 }
 export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
@@ -755,14 +783,15 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
           <div className="nav-caption">ワークスペース</div>
           <nav>
             {navigation.map((n) => (
-              <button
-                className={view === n.id ? "active" : ""}
+              <SidebarNavButton
                 key={n.id}
+                active={view === n.id}
                 onClick={() => nav(n.id)}
+                icon={n.icon}
+                iconSize={19}
               >
-                <n.icon size={19} />
                 {n.label}
-              </button>
+              </SidebarNavButton>
             ))}
           </nav>
           <div className="nav-caption management">管理</div>
@@ -775,14 +804,14 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                 ? [{ id: "admin", label: "運営管理", icon: ShieldCheck }]
                 : []),
             ].map((n) => (
-              <button
+              <SidebarNavButton
                 key={n.id}
-                className={view === n.id ? "active" : ""}
+                active={view === n.id}
                 onClick={() => nav(n.id as View)}
+                icon={n.icon}
               >
-                <n.icon size={18} />
                 {n.label}
-              </button>
+              </SidebarNavButton>
             ))}
           </nav>
         </SidebarContent>

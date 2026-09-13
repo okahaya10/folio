@@ -1584,7 +1584,10 @@ nav button:hover {
 }
 .dialog-scroll {
   max-height: 64vh;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
   padding: 0 3px 12px;
 }
 .form-grid {
@@ -1655,6 +1658,8 @@ nav button:hover {
   border-radius: 10px;
   background: #fcfdff;
   margin-bottom: 12px;
+  overflow-x: hidden;
+  touch-action: pan-y;
 }
 .item-card-head {
   display: flex;
