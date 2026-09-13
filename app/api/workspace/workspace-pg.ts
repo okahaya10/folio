@@ -4,6 +4,7 @@ import { fetchTenant, mutateWorkspace } from "@/lib/workspace-mutation.pg";
 import {
   acceptInvite,
   bootstrap,
+  changePassword,
   createTenant,
   invite,
   removeMember,
@@ -66,6 +67,15 @@ export async function POST(request: Request) {
     if (a.type === "createTenant")
       return json(await createTenant(pgQuery, u.userId, u.email, a.name));
     if (a.type === "contract") return json(await setContract(pgQuery, u.userId, a.tenant, a.status));
+    if (a.type === "changePassword")
+      return json(
+        await changePassword(
+          pgQuery,
+          u.userId,
+          String(a.currentPassword ?? ""),
+          String(a.newPassword ?? ""),
+        ),
+      );
 
     const t = await fetchTenant(pgQuery, text(a.tenant), u.userId);
     must(t.status === "active", "閲覧専用のため変更できません");

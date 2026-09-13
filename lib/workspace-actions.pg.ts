@@ -1,5 +1,5 @@
 import { empty, must, sample, text } from "./domain";
-import { hashPassword } from "./auth-credentials";
+import { hashPassword, verifyPassword } from "./auth-credentials";
 import type { QueryFn } from "./workspace-mutation.pg";
 
 // Postgres port of the setup/membership actions in
@@ -133,6 +133,44 @@ export async function grantAccount(
     email,
   ]);
   return { tenantId, email };
+}
+
+// Self-service: a logged-in user changes their own password, proving
+// they know the current one first.
+export async function changePassword(
+  query: QueryFn,
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+) {
+  must(newPassword && newPassword.length >= 8, "パスワードは8文字以上にしてください");
+  const { rows } = await query("SELECT password_hash FROM users WHERE id = $1", [userId]);
+  const user = rows[0];
+  must(user, "アカウントが見つかりません");
+  const ok = await verifyPassword(currentPassword, user.password_hash);
+  must(ok, "現在のパスワードが正しくありません");
+  const passwordHash = await hashPassword(newPassword);
+  await query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, userId]);
+  return { ok: true };
+}
+
+// Owner-only: resets a client's password without knowing the old one,
+// for when a client forgets it. The new password is returned once for
+// the owner to hand to the client, same as grantAccount's issued box.
+export async function resetTenantPassword(
+  query: QueryFn,
+  actorUserId: string,
+  tenantId: string,
+  newPassword: string,
+) {
+  await requirePlatformAdmin(query, actorUserId);
+  must(newPassword && newPassword.length >= 8, "パスワードは8文字以上にしてください");
+  const { rows } = await query("SELECT owner FROM tenants WHERE id = $1", [tenantId]);
+  const tenant = rows[0];
+  must(tenant, "会社が見つかりません");
+  const passwordHash = await hashPassword(newPassword);
+  await query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, tenant.owner]);
+  return { ok: true };
 }
 
 export async function listTenantsForAdmin(query: QueryFn, actorUserId: string) {

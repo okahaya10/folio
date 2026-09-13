@@ -14,6 +14,10 @@ export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
 
+export async function verifyPassword(password: string, hash: string) {
+  return bcrypt.compare(password, hash);
+}
+
 // NextAuth's JWT session strategy doesn't put the user id on the
 // session by default — these two callbacks thread it through
 // token -> session. Plain functions (NextAuth's actual shapes are

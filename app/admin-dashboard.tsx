@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Building2, Copy, LogOut, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import { Building2, Copy, KeyRound, LogOut, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 
 type Tenant = {
   id: string;
@@ -29,6 +29,9 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [editingName, setEditingName] = useState("");
+  const [resetIssued, setResetIssued] = useState<{ tenantId: string; password: string } | null>(
+    null,
+  );
 
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -115,6 +118,22 @@ export default function AdminDashboard() {
       });
       setEditingId("");
       await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPassword = async (tenantId: string, name: string) => {
+    if (!window.confirm(`「${name}」のパスワードをリセットします。よろしいですか？`)) return;
+    const newPassword = randomPassword();
+    setBusy(true);
+    try {
+      await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "resetPassword", tenant: tenantId, password: newPassword }),
+      });
+      setResetIssued({ tenantId, password: newPassword });
     } finally {
       setBusy(false);
     }
@@ -255,7 +274,8 @@ export default function AdminDashboard() {
           <span className="count-pill">{tenants?.length ?? 0}社</span>
         </div>
         {tenants?.map((t) => (
-          <div className="tenant-row" key={t.id}>
+          <div className="admin-tenant-block" key={t.id}>
+          <div className="tenant-row">
             <span className="customer-avatar">
               <Building2 size={22} />
             </span>
@@ -308,12 +328,39 @@ export default function AdminDashboard() {
             <button
               type="button"
               className="icon-button"
+              title="パスワードをリセット"
+              disabled={busy}
+              onClick={() => resetPassword(t.id, t.name)}
+            >
+              <KeyRound size={16} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
               title="削除"
               disabled={busy}
               onClick={() => removeTenant(t.id, t.name)}
             >
               <Trash2 size={16} />
             </button>
+          </div>
+          {resetIssued?.tenantId === t.id && (
+            <div className="admin-issued-box">
+              <p>パスワードをリセットしました。以下をクライアントに安全な方法で伝えてください（この画面を閉じると再表示できません）。</p>
+              <p>
+                <strong>新しいパスワード：</strong>
+                {resetIssued.password}
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => navigator.clipboard?.writeText(resetIssued.password)}
+                >
+                  <Copy size={14} />
+                  コピー
+                </button>
+              </p>
+            </div>
+          )}
           </div>
         ))}
         {tenants && tenants.length === 0 && !loadError && <p className="quiet">まだ会社がありません。</p>}

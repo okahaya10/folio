@@ -23,6 +23,7 @@ import {
   Trash2,
   Loader2,
   LogOut,
+  KeyRound,
   ShieldCheck,
   CheckCircle2,
   MoreHorizontal,
@@ -432,6 +433,8 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
         ...(state?.company.emailTemplates || {}),
       });
     else if (type === "invite") setForm({ email: "", role: "staff" });
+    else if (type === "changePassword")
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
     else setForm({ name: "", email: "", address: "", contact: "", notes: "" });
     setModal(type);
   };
@@ -809,6 +812,15 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                     : "スタッフ"}
               </small>
             </div>
+            {authMode === "vps" && (
+              <button
+                type="button"
+                title="パスワード変更"
+                onClick={() => open("changePassword")}
+              >
+                <KeyRound size={16} />
+              </button>
+            )}
             {authMode === "vps" ? (
               <button
                 type="button"
@@ -1517,7 +1529,9 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                         ? "メール文章を設定"
                         : modal === "invite"
                           ? "メンバーを招待"
-                          : labels[form.kind as Kind] + "を作成"}
+                          : modal === "changePassword"
+                            ? "パスワードを変更"
+                            : labels[form.kind as Kind] + "を作成"}
             </DialogTitle>
             <DialogDescription>
               {modal === "tenant"
@@ -1528,7 +1542,9 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                     ? "差し込み項目は文章内の好きな位置で使用できます。"
                     : modal === "invite"
                       ? "有効期限7日間の招待リンクを作成します。"
-                      : "入力内容を確認して保存してください。"}
+                      : modal === "changePassword"
+                        ? "現在のパスワードを入力して、新しいパスワードを設定してください。"
+                        : "入力内容を確認して保存してください。"}
             </DialogDescription>
           </DialogHeader>
           <div className="dialog-scroll">
@@ -1960,6 +1976,39 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                 )}
               </>
             )}
+            {modal === "changePassword" && (
+              <div className="form-grid">
+                <Field label="現在のパスワード *" wide>
+                  <input
+                    type="password"
+                    value={form.currentPassword || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, currentPassword: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="新しいパスワード *" wide>
+                  <input
+                    type="password"
+                    minLength={8}
+                    value={form.newPassword || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, newPassword: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="新しいパスワード（確認） *" wide>
+                  <input
+                    type="password"
+                    minLength={8}
+                    value={form.confirmPassword || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, confirmPassword: e.target.value })
+                    }
+                  />
+                </Field>
+              </div>
+            )}
           </div>
           <div className="dialog-actions">
             {state && (
@@ -2022,6 +2071,25 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                       setModal("");
                       await switchTenant(r.id);
                       toast.success("会社アカウントを作成しました");
+                    } catch (e: any) {
+                      toast.error(e.message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  } else if (modal === "changePassword") {
+                    if (form.newPassword !== form.confirmPassword) {
+                      toast.error("新しいパスワードが一致しません");
+                      return;
+                    }
+                    setBusy(true);
+                    try {
+                      await rawPost({
+                        type: "changePassword",
+                        currentPassword: form.currentPassword,
+                        newPassword: form.newPassword,
+                      });
+                      setModal("");
+                      toast.success("パスワードを変更しました");
                     } catch (e: any) {
                       toast.error(e.message);
                     } finally {

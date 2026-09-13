@@ -5,6 +5,7 @@ import {
   grantAccount,
   listTenantsForAdmin,
   renameTenant,
+  resetTenantPassword,
   setContract,
 } from "@/lib/workspace-actions.pg";
 
@@ -47,6 +48,11 @@ export async function POST(request: Request) {
     }
     if (a.type === "delete") {
       return json(await deleteTenant(pgQuery, u.userId, text(a.tenant)));
+    }
+    if (a.type === "resetPassword") {
+      return json(
+        await resetTenantPassword(pgQuery, u.userId, text(a.tenant), String(a.password ?? "")),
+      );
     }
     throw new Error("操作を確認してください");
   } catch (e) {
