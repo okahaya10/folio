@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Building2, Copy, ShieldCheck } from "lucide-react";
+import { Building2, Copy, LogOut, ShieldCheck } from "lucide-react";
 
 type Tenant = {
   id: string;
@@ -97,11 +97,32 @@ export default function AdminDashboard() {
     }
   };
 
+  const logout = async () => {
+    try {
+      const csrfRes = await fetch("/api/auth/csrf");
+      const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ csrfToken, json: "true" }),
+      });
+    } catch {
+      // Fall through to the reload below regardless — if signout genuinely
+      // didn't reach the server, the page's own session check will just
+      // redirect to /login again and the user can retry.
+    }
+    window.location.href = "/login";
+  };
+
   return (
     <main className="admin-page">
       <header className="admin-header">
         <ShieldCheck size={22} />
         <h1>Folio 運営管理</h1>
+        <button type="button" className="btn subtle admin-logout" title="ログアウト" onClick={logout}>
+          <LogOut size={16} />
+          ログアウト
+        </button>
       </header>
 
       {loadError && <p className="login-error admin-permission-error">{loadError}</p>}

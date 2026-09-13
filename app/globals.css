@@ -1513,6 +1513,9 @@ nav button:hover {
   gap: 10px;
   color: #16243d;
 }
+.admin-header .admin-logout {
+  margin-left: auto;
+}
 .admin-header h2,
 .admin-header h1 {
   font-size: 20px;
