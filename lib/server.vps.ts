@@ -53,6 +53,15 @@ export function bucket(): FileStorage {
 export async function identity(request: Request) {
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
   if (!token?.id || !token.email) throw new Error("ログインが必要です");
+  // The JWT itself doesn't shrink-wrap to a deleted account — if the
+  // owner deletes this user's tenant (and with it their users row, see
+  // deleteTenant), a browser that was already signed in keeps a
+  // technically-valid-looking token pointing at a user that no longer
+  // exists. Without this check that silently sails through as a real
+  // but tenant-less session, landing on "create a new company" instead
+  // of being sent back to /login.
+  const { rows } = await pg().query("SELECT 1 FROM users WHERE id = $1", [token.id]);
+  if (!rows.length) throw new Error("ログインが必要です");
   return {
     userId: token.id as string,
     email: token.email as string,
