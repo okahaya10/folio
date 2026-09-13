@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Building2, Copy, LogOut, ShieldCheck } from "lucide-react";
+import { Building2, Copy, LogOut, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 
 type Tenant = {
   id: string;
@@ -27,6 +27,8 @@ export default function AdminDashboard() {
   const [tenants, setTenants] = useState<Tenant[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState("");
+  const [editingName, setEditingName] = useState("");
 
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -90,6 +92,42 @@ export default function AdminDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "contract", tenant: tenantId, status }),
+      });
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEdit = (t: Tenant) => {
+    setEditingId(t.id);
+    setEditingName(t.name);
+  };
+
+  const saveEdit = async (tenantId: string) => {
+    if (!editingName.trim()) return;
+    setBusy(true);
+    try {
+      await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "rename", tenant: tenantId, name: editingName }),
+      });
+      setEditingId("");
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeTenant = async (tenantId: string, name: string) => {
+    if (!window.confirm(`「${name}」を削除します。取引先データは失われ、元に戻せません。よろしいですか？`)) return;
+    setBusy(true);
+    try {
+      await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "delete", tenant: tenantId }),
       });
       await load();
     } finally {
@@ -221,14 +259,35 @@ export default function AdminDashboard() {
             <span className="customer-avatar">
               <Building2 size={22} />
             </span>
-            <div>
-              <strong>{t.name}</strong>
-              <small>{t.owner_email || t.plan}</small>
-            </div>
+            {editingId === t.id ? (
+              <div className="admin-edit-name-row">
+                <input
+                  className="login-input"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit(t.id);
+                    if (e.key === "Escape") setEditingId("");
+                  }}
+                />
+                <button type="button" className="btn subtle" disabled={busy} onClick={() => saveEdit(t.id)}>
+                  保存
+                </button>
+                <button type="button" className="text-button" onClick={() => setEditingId("")}>
+                  取消
+                </button>
+              </div>
+            ) : (
+              <div>
+                <strong>{t.name}</strong>
+                <small>{t.owner_email || t.plan}</small>
+              </div>
+            )}
             <select
               className="admin-status-select"
               value={t.status}
-              disabled={busy}
+              disabled={busy || editingId === t.id}
               onChange={(e) => changeStatus(t.id, e.target.value)}
             >
               {(Object.keys(statusLabel) as Tenant["status"][]).map((s) => (
@@ -237,6 +296,24 @@ export default function AdminDashboard() {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className="icon-button"
+              title="編集"
+              disabled={busy || editingId === t.id}
+              onClick={() => startEdit(t)}
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              title="削除"
+              disabled={busy}
+              onClick={() => removeTenant(t.id, t.name)}
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         ))}
         {tenants && tenants.length === 0 && !loadError && <p className="quiet">まだ会社がありません。</p>}

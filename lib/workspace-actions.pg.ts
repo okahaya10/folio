@@ -159,6 +159,30 @@ export async function setContract(
   return { ok: true };
 }
 
+export async function renameTenant(
+  query: QueryFn,
+  actorUserId: string,
+  tenantId: string,
+  name: string,
+) {
+  await requirePlatformAdmin(query, actorUserId);
+  const cleanName = text(name);
+  must(cleanName, "会社名を入力してください");
+  await query("UPDATE tenants SET name = $1 WHERE id = $2", [cleanName, tenantId]);
+  return { ok: true };
+}
+
+// Removes a client's tenant and its memberships/invitations. Leaves the
+// owner's user row in place (an owner could belong to another tenant),
+// so this only tears down the tenant-scoped rows, not the account itself.
+export async function deleteTenant(query: QueryFn, actorUserId: string, tenantId: string) {
+  await requirePlatformAdmin(query, actorUserId);
+  await query("DELETE FROM invitations WHERE tenant = $1", [tenantId]);
+  await query('DELETE FROM members WHERE tenant = $1', [tenantId]);
+  await query("DELETE FROM tenants WHERE id = $1", [tenantId]);
+  return { ok: true };
+}
+
 export async function invite(
   query: QueryFn,
   tenantId: string,

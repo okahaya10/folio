@@ -1,6 +1,12 @@
 import { identity, pgQuery, checkOrigin, fail, json } from "@/lib/server.vps";
 import { must, text } from "@/lib/domain";
-import { grantAccount, listTenantsForAdmin, setContract } from "@/lib/workspace-actions.pg";
+import {
+  deleteTenant,
+  grantAccount,
+  listTenantsForAdmin,
+  renameTenant,
+  setContract,
+} from "@/lib/workspace-actions.pg";
 
 // Owner-only API (see lib/host-routing.ts — only reachable from the
 // admin host regardless of DATABASE_URL/D1, since this route only
@@ -35,6 +41,12 @@ export async function POST(request: Request) {
     }
     if (a.type === "contract") {
       return json(await setContract(pgQuery, u.userId, text(a.tenant), text(a.status)));
+    }
+    if (a.type === "rename") {
+      return json(await renameTenant(pgQuery, u.userId, text(a.tenant), text(a.name)));
+    }
+    if (a.type === "delete") {
+      return json(await deleteTenant(pgQuery, u.userId, text(a.tenant)));
     }
     throw new Error("操作を確認してください");
   } catch (e) {

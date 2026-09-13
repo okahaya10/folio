@@ -1490,6 +1490,15 @@ nav button:hover {
   width: 150px !important;
   flex: none;
 }
+.admin-edit-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.admin-edit-name-row .login-input {
+  flex: 1;
+}
 .admin-status-select {
   width: 150px;
   flex: none;
