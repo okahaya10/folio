@@ -621,12 +621,26 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
         text: emailBody(d),
       };
       if (share && navigator.canShare?.(shareData)) {
-        await navigator.share(shareData);
-        if (d.status === "issued" && !d.sentAt && canWrite) {
-          requestId.current = crypto.randomUUID();
-          await mutate({ type: "sent", id: d.id });
-        } else {
-          toast.success("共有しました");
+        try {
+          await navigator.share(shareData);
+          if (d.status === "issued" && !d.sentAt && canWrite) {
+            requestId.current = crypto.randomUUID();
+            await mutate({ type: "sent", id: d.id });
+          } else {
+            toast.success("共有しました");
+          }
+        } catch (shareError: any) {
+          // Cancelling the native share sheet throws AbortError — not a
+          // failure, just do nothing. Some in-app browsers (LINE's
+          // WebView etc.) report canShare() as supported but then
+          // refuse the actual share() call (NotAllowedError) — fall
+          // back to a plain download instead of surfacing that raw
+          // English error.
+          if (shareError.name === "AbortError") return;
+          download(b, name);
+          toast.success(
+            "この画面では共有機能が使えないため、PDFをダウンロードしました。メールなどに添付して送付してください",
+          );
         }
       } else {
         download(b, name);
