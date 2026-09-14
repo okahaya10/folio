@@ -1638,6 +1638,17 @@ nav button:hover {
   font-size: 12px;
   color: #a5b1c3;
 }
+.live-preview {
+  margin-top: 27px;
+  padding-top: 20px;
+  border-top: 1px solid #eef1f6;
+}
+.live-preview-paper {
+  transform: scale(0.92);
+  transform-origin: top left;
+  width: calc(100% / 0.92);
+  pointer-events: none;
+}
 .quick-customer-form {
   display: flex;
   flex-direction: column;
@@ -1694,7 +1705,7 @@ nav button:hover {
 }
 .item-numbers {
   display: grid;
-  grid-template-columns: 0.7fr 0.7fr 1.2fr 1fr;
+  grid-template-columns: 1.2fr 0.7fr 0.8fr 1.1fr 0.8fr;
   gap: 12px;
   margin-top: 13px;
 }

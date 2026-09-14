@@ -158,7 +158,7 @@ function drawPage(
   const top = 589,
     rowH = 27.5,
     headerH = 24;
-  const columns = [42, 326, 374, 421, 486, 553];
+  const columns = [42, 92, 326, 374, 421, 486, 553];
   page.drawRectangle({
     x: 42,
     y: top - headerH,
@@ -166,7 +166,7 @@ function drawPage(
     height: headerH,
     color: dark,
   });
-  ["摘要", "数量", "単位", "単価", "金額"].forEach((label, i) =>
+  ["日付", "摘要", "数量", "単位", "単価", "金額"].forEach((label, i) =>
     write(
       label,
       columns[i] +
@@ -195,20 +195,21 @@ function drawPage(
   );
   items.forEach((item, index) => {
     const y = top - headerH - index * rowH - 15;
-    write(fit(item.description, 272, 8.5), columns[0] + 5, y, 8.5);
-    write(String(item.quantity), columns[1] + 6, y, 8.5);
-    write(fit(item.unit, 35, 8.5), columns[2] + 6, y, 8.5);
+    if (item.date) write(fit(item.date, 46, 7.5), columns[0] + 4, y, 7.5, muted);
+    write(fit(item.description, 224, 8.5), columns[1] + 5, y, 8.5);
+    write(String(item.quantity), columns[2] + 6, y, 8.5);
+    write(fit(item.unit, 35, 8.5), columns[3] + 6, y, 8.5);
     const unitPrice = yen(item.price),
       amount = yen(
         Math.floor((Math.round(item.quantity * 100) * item.price) / 100),
       );
     write(
       unitPrice,
-      columns[4] - font.widthOfTextAtSize(unitPrice, 8.5) - 5,
+      columns[5] - font.widthOfTextAtSize(unitPrice, 8.5) - 5,
       y,
       8.5,
     );
-    write(amount, columns[5] - font.widthOfTextAtSize(amount, 8.5) - 5, y, 8.5);
+    write(amount, columns[6] - font.widthOfTextAtSize(amount, 8.5) - 5, y, 8.5);
   });
 
   if (pageIndex === pageCount - 1) {

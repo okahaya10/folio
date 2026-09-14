@@ -103,7 +103,7 @@ export function items(raw: unknown): Item[] {
       r = Number(i.rate);
     must(
       text(i.description) &&
-        q > 0 &&
+        q >= 0 &&
         q <= 10000 &&
         Math.abs(q * 100 - Math.round(q * 100)) < 0.00001 &&
         Number.isSafeInteger(p) &&

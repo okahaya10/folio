@@ -22,6 +22,9 @@ assert.throws(() => items([{ ...one(5), quantity: -1 }]));
 assert.throws(() => items([{ ...one(5), rate: 12 }]));
 assert.equal(totals([one(10000), one(-1000)]).total, 9900);
 assert.equal(items([one(-1000)])[0].price, -1000);
+// A label-only line (no quantity/price) must be allowed, not just
+// zero-quantity rows with a price — e.g. a section heading row.
+assert.equal(items([{ ...one(0), quantity: 0 }])[0].quantity, 0);
 const c = apply(
   s,
   { type: "customer", name: "顧客 A", notes: "メモ：要注意先" },

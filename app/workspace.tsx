@@ -273,6 +273,167 @@ function Field({
     </label>
   );
 }
+type PaperDoc = {
+  kind: Kind;
+  number: string;
+  date: string;
+  customer: { name: string };
+  title: string;
+  company: Company;
+  total: number;
+  subtotal: number;
+  taxes: Record<string, number>;
+  items: Item[];
+  due: string;
+  notes: string;
+};
+function DocumentPaper({
+  doc,
+  demo,
+  tenantId,
+  version,
+  className = "",
+}: {
+  doc: PaperDoc;
+  demo?: boolean;
+  tenantId: string;
+  version: number;
+  className?: string;
+}) {
+  return (
+    <article className={"paper " + className}>
+      <div className="paper-top">
+        <h2>{labels[doc.kind]}</h2>
+        <span className="paper-date">
+          {doc.number}
+          <br />
+          {doc.kind === "receipt" ? "受領日" : "発行日"}：
+          {japaneseDate(doc.date)}
+        </span>
+      </div>
+      <div className="paper-parties">
+        <div>
+          <strong className="paper-customer">{doc.customer.name} 御中</strong>
+          <p>件名：{doc.title}</p>
+        </div>
+        <div className="paper-company">
+          <dl>
+            <div>
+              <dt>会社名：</dt>
+              <dd>{doc.company.name}</dd>
+            </div>
+            <div>
+              <dt>住　所：</dt>
+              <dd>{doc.company.address}</dd>
+            </div>
+            <div>
+              <dt>ＴＥＬ：</dt>
+              <dd>{doc.company.phone}</dd>
+            </div>
+            {doc.company.registration && (
+              <div>
+                <dt>登録番号：</dt>
+                <dd>{normalizeInvoiceNumber(doc.company.registration)}</dd>
+              </div>
+            )}
+          </dl>
+          {doc.company.stampKey && (
+            <img
+              src={
+                "/api/stamp?tenant=" +
+                encodeURIComponent(tenantId) +
+                "&v=" +
+                version
+              }
+              alt="角印"
+            />
+          )}
+        </div>
+      </div>
+      <div className="paper-amount">
+        <span>{doc.kind === "receipt" ? "受領金額" : "合計金額（税込）"}</span>
+        <strong>{yen(doc.total)}</strong>
+      </div>
+      <div className="paper-lines">
+        <div className="paper-line heading">
+          <span>摘要</span>
+          <span>数量</span>
+          <span>単位</span>
+          <span>単価</span>
+          <span>金額</span>
+        </div>
+        {Array.from(
+          { length: Math.max(12, doc.items.length) },
+          (_, idx) => doc.items[idx],
+        ).map((i, idx) => (
+          <div className="paper-line" key={idx}>
+            <span>
+              {i?.date && (
+                <small>
+                  {i.date}
+                  <br />
+                </small>
+              )}
+              {i?.description || ""}
+            </span>
+            <span>{i?.quantity ?? ""}</span>
+            <span>{i?.unit || ""}</span>
+            <span>{i ? yen(Number(i.price)) : ""}</span>
+            <span>
+              {i
+                ? yen(
+                    Math.floor(
+                      (Math.round(i.quantity * 100) * Number(i.price)) / 100,
+                    ),
+                  )
+                : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="paper-totals">
+        <div>
+          <span>小計</span>
+          <b>{yen(doc.subtotal)}</b>
+        </div>
+        {Object.entries(doc.taxes).map(([r, t]) => (
+          <div key={r}>
+            <span>消費税({r}%)</span>
+            <b>{yen(t)}</b>
+          </div>
+        ))}
+        <div className="sum">
+          <span>合計</span>
+          <b>{yen(doc.total)}</b>
+        </div>
+      </div>
+      {doc.due && (
+        <p className="paper-notes">
+          {doc.kind === "estimate" ? "有効期限" : "お支払期限"}：{doc.due}
+        </p>
+      )}
+      {doc.kind === "invoice" && doc.company.bank && (
+        <p className="paper-notes">
+          お振込先
+          <br />
+          {doc.company.bank}
+        </p>
+      )}
+      {doc.notes && (
+        <p className="paper-notes">
+          備考
+          <br />
+          {doc.notes}
+        </p>
+      )}
+      {demo && (
+        <p className="sample-watermark">
+          SAMPLE — 実際の取引には使用できません
+        </p>
+      )}
+    </article>
+  );
+}
 function SidebarNavButton({
   active,
   onClick,
@@ -1791,6 +1952,20 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                         />
                       </Field>
                       <div className="item-numbers">
+                        <Field label="作業日">
+                          <input
+                            type="date"
+                            value={item.date || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                items: form.items.map((x: Item, j: number) =>
+                                  j === i ? { ...x, date: e.target.value } : x,
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
                         <Field label="数量">
                           <input
                             type="text"
@@ -1911,6 +2086,39 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                     />
                     記載した金額を実際に受領しました
                   </label>
+                )}
+                {state && (
+                  <div className="live-preview">
+                    <div className="editor-section-heading">
+                      <h3>プレビュー</h3>
+                      <span>入力内容がすぐに反映されます</span>
+                    </div>
+                    <DocumentPaper
+                      doc={{
+                        kind: (form.kind as Kind) || "estimate",
+                        number: "下書き",
+                        date: form.date || today(),
+                        customer: state.customers.find(
+                          (c) => c.id === form.customerId,
+                        ) || { name: "（取引先未選択）" },
+                        title: form.title || "",
+                        company: state.company,
+                        items: form.items || [],
+                        due: form.due || "",
+                        notes: form.notes || "",
+                        ...(() => {
+                          try {
+                            return totals(form.items || []);
+                          } catch {
+                            return { subtotal: 0, tax: 0, total: 0, taxes: {} };
+                          }
+                        })(),
+                      }}
+                      tenantId={tenantId}
+                      version={version}
+                      className="live-preview-paper"
+                    />
+                  </div>
                 )}
               </>
             )}
@@ -2346,151 +2554,15 @@ export default function Workspace({ authMode }: { authMode?: "vps" } = {}) {
                     }
                   />
                 )}
-                <article
-                  className={`paper ${current.status !== "draft" ? "issued-paper-preview" : ""}`}
-                >
-                  <div className="paper-top">
-                    <h2>{labels[current.kind]}</h2>
-                    <span className="paper-date">
-                      {current.number}
-                      <br />
-                      {current.kind === "receipt" ? "受領日" : "発行日"}：
-                      {japaneseDate(current.date)}
-                    </span>
-                  </div>
-                  <div className="paper-parties">
-                    <div>
-                      <strong className="paper-customer">
-                        {current.customer.name} 御中
-                      </strong>
-                      <p>件名：{current.title}</p>
-                    </div>
-                    <div className="paper-company">
-                      <dl>
-                        <div>
-                          <dt>会社名：</dt>
-                          <dd>{current.company.name}</dd>
-                        </div>
-                        <div>
-                          <dt>住　所：</dt>
-                          <dd>{current.company.address}</dd>
-                        </div>
-                        <div>
-                          <dt>ＴＥＬ：</dt>
-                          <dd>{current.company.phone}</dd>
-                        </div>
-                        {current.company.registration && (
-                          <div>
-                            <dt>登録番号：</dt>
-                            <dd>
-                              {normalizeInvoiceNumber(
-                                current.company.registration,
-                              )}
-                            </dd>
-                          </div>
-                        )}
-                      </dl>
-                      {current.company.stampKey && (
-                        <img
-                          src={
-                            "/api/stamp?tenant=" +
-                            encodeURIComponent(tenantId) +
-                            "&v=" +
-                            version
-                          }
-                          alt="角印"
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <div className="paper-amount">
-                    <span>
-                      {current.kind === "receipt"
-                        ? "受領金額"
-                        : "合計金額（税込）"}
-                    </span>
-                    <strong>{yen(current.total)}</strong>
-                  </div>
-                  <div className="paper-lines">
-                    <div className="paper-line heading">
-                      <span>摘要</span>
-                      <span>数量</span>
-                      <span>単位</span>
-                      <span>単価</span>
-                      <span>金額</span>
-                    </div>
-                    {Array.from(
-                      { length: Math.max(12, current.items.length) },
-                      (_, idx) => current.items[idx],
-                    ).map((i, idx) => (
-                      <div className="paper-line" key={idx}>
-                        <span>
-                          {i?.date && (
-                            <small>
-                              {i.date}
-                              <br />
-                            </small>
-                          )}
-                          {i?.description || ""}
-                        </span>
-                        <span>{i?.quantity ?? ""}</span>
-                        <span>{i?.unit || ""}</span>
-                        <span>{i ? yen(i.price) : ""}</span>
-                        <span>
-                          {i
-                            ? yen(
-                                Math.floor(
-                                  (Math.round(i.quantity * 100) * i.price) /
-                                    100,
-                                ),
-                              )
-                            : ""}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="paper-totals">
-                    <div>
-                      <span>小計</span>
-                      <b>{yen(current.subtotal)}</b>
-                    </div>
-                    {Object.entries(current.taxes).map(([r, t]) => (
-                      <div key={r}>
-                        <span>消費税({r}%)</span>
-                        <b>{yen(t)}</b>
-                      </div>
-                    ))}
-                    <div className="sum">
-                      <span>合計</span>
-                      <b>{yen(current.total)}</b>
-                    </div>
-                  </div>
-                  {current.due && (
-                    <p className="paper-notes">
-                      {current.kind === "estimate" ? "有効期限" : "お支払期限"}
-                      ：{current.due}
-                    </p>
-                  )}
-                  {current.kind === "invoice" && current.company.bank && (
-                    <p className="paper-notes">
-                      お振込先
-                      <br />
-                      {current.company.bank}
-                    </p>
-                  )}
-                  {current.notes && (
-                    <p className="paper-notes">
-                      備考
-                      <br />
-                      {current.notes}
-                    </p>
-                  )}
-                  {state?.demo && (
-                    <p className="sample-watermark">
-                      SAMPLE — 実際の取引には使用できません
-                    </p>
-                  )}
-                </article>
+                <DocumentPaper
+                  doc={current}
+                  demo={state?.demo}
+                  tenantId={tenantId}
+                  version={version}
+                  className={
+                    current.status !== "draft" ? "issued-paper-preview" : ""
+                  }
+                />
                 <div className="detail-actions">
                   {current.status === "draft" ? (
                     <button
