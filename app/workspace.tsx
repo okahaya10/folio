@@ -145,6 +145,10 @@ const japaneseDate = (value: string) => {
     ? `${match[1]}年${Number(match[2])}月${Number(match[3])}日`
     : value;
 };
+const monthDay = (value: string) => {
+  const match = value.match(/^\d{4}-(\d{1,2})-(\d{1,2})$/);
+  return match ? `${Number(match[1])}/${Number(match[2])}` : value;
+};
 const normalizeInvoiceNumber = (value: string) =>
   value
     .replace(/[！-～]/g, (character) =>
@@ -356,6 +360,7 @@ function DocumentPaper({
       </div>
       <div className="paper-lines">
         <div className="paper-line heading">
+          <span>日付</span>
           <span>摘要</span>
           <span>数量</span>
           <span>単位</span>
@@ -367,15 +372,8 @@ function DocumentPaper({
           (_, idx) => doc.items[idx],
         ).map((i, idx) => (
           <div className="paper-line" key={idx}>
-            <span>
-              {i?.date && (
-                <small>
-                  {i.date}
-                  <br />
-                </small>
-              )}
-              {i?.description || ""}
-            </span>
+            <span>{i?.date ? monthDay(i.date) : ""}</span>
+            <span>{i?.description || ""}</span>
             <span>{i?.quantity ?? ""}</span>
             <span>{i?.unit || ""}</span>
             <span>{i ? yen(Number(i.price)) : ""}</span>

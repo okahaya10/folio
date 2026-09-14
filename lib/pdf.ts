@@ -82,6 +82,10 @@ function drawPage(
       ? `${match[1]}年${Number(match[2])}月${Number(match[3])}日`
       : value;
   };
+  const monthDay = (value: string) => {
+    const match = value.match(/^\d{4}-(\d{1,2})-(\d{1,2})$/);
+    return match ? `${Number(match[1])}/${Number(match[2])}` : value;
+  };
 
   center(labels[d.kind], 790, 23);
   write(fit(d.number, 100, 8), 400, 795, 8, muted);
@@ -195,7 +199,8 @@ function drawPage(
   );
   items.forEach((item, index) => {
     const y = top - headerH - index * rowH - 15;
-    if (item.date) write(fit(item.date, 46, 7.5), columns[0] + 4, y, 7.5, muted);
+    if (item.date)
+      write(fit(monthDay(item.date), 46, 7.5), columns[0] + 4, y, 7.5, muted);
     write(fit(item.description, 224, 8.5), columns[1] + 5, y, 8.5);
     write(String(item.quantity), columns[2] + 6, y, 8.5);
     write(fit(item.unit, 35, 8.5), columns[3] + 6, y, 8.5);

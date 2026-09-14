@@ -2504,9 +2504,9 @@ nav button:hover {
     font-size: 28px;
   }
   .paper-line {
-    grid-template-columns: 1fr 36px 65px;
-    gap: 5px;
-    padding: 12px 6px;
+    grid-template-columns: 28px minmax(0, 1fr) 30px 30px 50px 56px;
+    gap: 0;
+    padding: 0;
     font-size: 10px;
   }
   .paper-totals {
@@ -2738,7 +2738,7 @@ body {
 }
 .paper-line,
 .paper-line.heading {
-  grid-template-columns: minmax(0, 1fr) 42px 42px 68px 75px;
+  grid-template-columns: 40px minmax(0, 1fr) 42px 42px 68px 75px;
   gap: 0;
   padding: 0;
   border: 0;
@@ -2750,11 +2750,16 @@ body {
   border-bottom: 1px solid #b9c0cb;
   overflow: hidden;
 }
-.paper-line > span:nth-child(n + 2) {
+.paper-line > span:nth-child(1),
+.paper-line > span:nth-child(n + 3) {
   text-align: center;
 }
-.paper-line > span:nth-child(n + 4) {
+.paper-line > span:nth-child(n + 5) {
   text-align: right;
+}
+.paper-line:not(.heading) > span:first-child {
+  font-size: 9px;
+  color: #a2afc1;
 }
 .paper-line.heading > span {
   min-height: auto;
