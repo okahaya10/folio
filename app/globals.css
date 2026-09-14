@@ -2761,9 +2761,6 @@ body {
   padding: 7px 5px;
   text-align: center;
 }
-.paper-line small {
-  display: none;
-}
 .paper-date {
   font-size: 12px !important;
   line-height: 2 !important;
