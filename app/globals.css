@@ -1955,7 +1955,7 @@ nav button:hover {
 }
 .paper-notes {
   font-size: 10px;
-  color: #96a5ba;
+  color: #000;
   line-height: 1.8;
   border-top: 1px solid #e7edf5;
   padding-top: 15px;
@@ -2759,7 +2759,7 @@ body {
 }
 .paper-line:not(.heading) > span:first-child {
   font-size: 9px;
-  color: #a2afc1;
+  color: #000;
 }
 .paper-line.heading > span {
   min-height: auto;

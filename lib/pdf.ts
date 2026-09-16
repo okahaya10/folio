@@ -200,7 +200,7 @@ function drawPage(
   items.forEach((item, index) => {
     const y = top - headerH - index * rowH - 15;
     if (item.date)
-      write(fit(monthDay(item.date), 46, 7.5), columns[0] + 4, y, 7.5, muted);
+      write(fit(monthDay(item.date), 46, 7.5), columns[0] + 4, y, 7.5, black);
     write(fit(item.description, 224, 8.5), columns[1] + 5, y, 8.5);
     write(String(item.quantity), columns[2] + 6, y, 8.5);
     write(fit(item.unit, 35, 8.5), columns[3] + 6, y, 8.5);
@@ -259,7 +259,7 @@ function drawPage(
     ]
       .filter(Boolean)
       .join("　");
-    write(fit(notes, 501, 8), 47, 96, 8, muted);
+    write(fit(notes, 501, 8), 47, 96, 8, black);
   }
   if (d.status === "draft") write("下書き", 42, 30, 9, muted);
   if (d.status === "cancelled")
